@@ -41,7 +41,35 @@ app.use(cors({
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+// Initialize database connection (for Vercel, this happens on cold start)
+let isDbConnected = false;
+const initDB = async () => {
+  if (!isDbConnected) {
+    await connectDB(process.env.MONGO_URI);
+    isDbConnected = true;
+    console.log("✅ Database connected");
+  }
+};
+
+// Health check - initialize DB if needed
+app.get("/health", async (req, res) => {
+  try {
+    await initDB();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Routes - initialize DB before handling
+app.use(async (req, res, next) => {
+  try {
+    await initDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/accounts", accountRoutes);
@@ -51,15 +79,22 @@ app.use("/api/notifications", notificationRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// For Vercel serverless - export the app
+module.exports = app;
 
-(async () => {
-  try {
-    await connectDB(process.env.MONGO_URI);
-    startReminderJobs();
-    app.listen(PORT, () => console.log(`✅ Server on http://localhost:${PORT}`));
-  } catch (err) {
-    console.error("❌ Statsup Error:", err);
-    process.exit(1);
-  }
-})();
+// For local development - start the server
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+
+  (async () => {
+    try {
+      await connectDB(process.env.MONGO_URI);
+      startReminderJobs();
+      app.listen(PORT, () => console.log(`✅ Server on http://localhost:${PORT}`));
+    } catch (err) {
+      console.error("❌ Startup Error:", err);
+      process.exit(1);
+    }
+  })();
+}
+
