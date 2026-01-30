@@ -63,3 +63,11 @@ Open:
 ## 6) Notes for AWS S3
 - Bucket should allow public read **OR** use CloudFront / presigned URLs.
 - This project stores public URLs using `S3_PUBLIC_BASE_URL` + key.
+
+
+
+## FrontEnd Deployed Link
+https://interest-calculator-one-beryl.vercel.app/
+
+## BackEnd Deployed Link
+https://interest-calculator-backend.vercel.app/
