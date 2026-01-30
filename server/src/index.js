@@ -19,7 +19,25 @@ const app = express();
 app.use(helmet());
 app.use(rateLimit({ windowMs: 60 * 1000, limit: 200 })); // basic protection
 
-app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+// CORS - support both local and production
+const allowedOrigins = [
+  process.env.CORS_ORIGIN,
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
